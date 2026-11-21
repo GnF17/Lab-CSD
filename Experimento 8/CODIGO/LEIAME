@@ -1,0 +1,36 @@
+Oi! Segue um resumo do que ajustamos no código do Projeto 2 (Sincronização Mestre-Escravo de Lorenz) e o passo a passo caso você queira replicar ou conferir os testes no MATLAB/Simulink:
+
+1. O QUE FOI ALTERADO NOS CÓDIGOS (limpeza da base antiga)
+- Planta_Master.m: implementamos o sistema de Lorenz (sigma = 10, rho = 28, beta = 8/3) com condição inicial fixa em x0 = [1.5; 2; 5]. Removemos a variável "c" e a senoide "mensagem" (que eram do exemplo de criptografia), deixando a saída limpa (sys = x) e DirFeedthrough = 0.
+- Planta_Slave.m: mesmo sistema de Lorenz, somando os sinais de controle u(1), u(2) e u(3) nas derivadas. Também mudamos DirFeedthrough para 0, o que eliminou o erro/aviso de loop algébrico no Simulink sem precisar de bloco Memory.
+- Sincronizador.m: removemos os 3 estados zerados que sobravam do modelo de rede neural (NumContStates = 0) e trocamos o ganho único "psi" por três ganhos individuais: k1, k2 e k3. A lei de controle ficou u_i = -k_i * (x_slave - x_master).
+- Graficos.m: tiramos os gráficos de mensagem/criptografia (antigas FIG7 a FIG10), padronizamos o erro como e = Xslave - Xmaster e adicionamos a FIG7 (norma do erro ||e(t)|| com tempo de convergência t_c para tol = 0.05 e RMSE) e a FIG8 (diagrama de fase x-z do atrator de Lorenz).
+- Comparar_Testes.m: script novo que lê os arquivos .mat salvos de cada teste e gera automaticamente dois gráficos: as curvas de ||e(t)|| sobrepostas e o painel de barras comparando ||e(0)||, t_c e RMSE (ponderado no tempo com trapz por causa do passo variável do ode45).
+
+2. COMO REPLICAR OS TESTES (passo a passo)
+Sempre siga esta ordem para cada cenário:
+(1) Edite o parâmetro no arquivo .m -> (2) SALVE o arquivo (Ctrl+S) -> (3) Rode o Simulink (Stop Time = 10 s, ode45) -> (4) Salve os dados no Command Window com:
+save nome_do_arquivo.mat t Xmaster Xslave
+
+- Bloco 1 (Ganho global):
+  Mantenha x0 = [0.1; 0.3; -0.1] em Planta_Slave.m e mude k1, k2 e k3 para valores iguais em Sincronizador.m:
+  * k1 = k2 = k3 = 10
+  * k1 = k2 = k3 = 50 (nosso caso de referência)
+  * k1 = k2 = k3 = 100
+
+- Bloco 2 (Condições iniciais):
+  Deixe k1 = k2 = k3 = 50 fixos em Sincronizador.m e mude apenas o vetor x0 dentro do case 0 de Planta_Slave.m:
+  * CI Próxima:       x0 = [1.2; 1.8; 4.5];
+  * CI Intermediária: x0 = [0.1; 0.3; -0.1];
+  * CI Distante:      x0 = [-15; -20; 40];
+
+- Bloco 3 (Parâmetros/Topologia de acoplamento):
+  Volte x0 = [0.1; 0.3; -0.1] em Planta_Slave.m e altere os ganhos em Sincronizador.m para testar controle subatuado (desacoplando canais):
+  * Total:    k1 = 50; k2 = 50; k3 = 50;
+  * Apenas x: k1 = 50; k2 = 0;  k3 = 0;
+  * Apenas y: k1 = 0;  k2 = 50; k3 = 0;
+  * Apenas z: k1 = 0;  k2 = 0;  k3 = 50; (esperado não convergir por simetria do Lorenz)
+
+3. COMO GERAR OS GRÁFICOS
+- Para ver trajetórias, erros individuais e o atrator (FIG1 a FIG8) de qualquer teste: rode a simulação (ou dê "load arquivo.mat") e execute Graficos.m.
+- Para gerar os comparativos de cada bloco: abra Comparar_Testes.m, ajuste apenas o cabeçalho no topo (lista de arquivos .mat, legendas, título e limite_tempo) e execute o script.
