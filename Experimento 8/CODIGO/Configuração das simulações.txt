@@ -1,0 +1,4 @@
+Ode113 (Adams) --> Foi o escolhido porque apesar de demorar mais traz o um desempenho melhor
+Tolerância --> e-8
+passo variável
+20 segs de simulação
